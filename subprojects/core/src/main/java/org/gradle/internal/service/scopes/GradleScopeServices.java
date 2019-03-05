@@ -32,6 +32,7 @@ import org.gradle.api.internal.project.ProjectStateRegistry;
 import org.gradle.api.internal.tasks.options.OptionReader;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.cache.CacheRepository;
+import org.gradle.cache.internal.CrossBuildInMemoryCacheFactory;
 import org.gradle.cache.internal.DefaultFileContentCacheFactory;
 import org.gradle.cache.internal.FileContentCacheFactory;
 import org.gradle.cache.internal.InMemoryCacheDecoratorFactory;
@@ -77,6 +78,7 @@ import org.gradle.internal.instantiation.InstantiatorFactory;
 import org.gradle.internal.logging.LoggingManagerInternal;
 import org.gradle.internal.logging.text.StyledTextOutputFactory;
 import org.gradle.internal.operations.BuildOperationExecutor;
+import org.gradle.internal.reflect.ClassInspector;
 import org.gradle.internal.reflect.Instantiator;
 import org.gradle.internal.resources.ResourceLockCoordinationService;
 import org.gradle.internal.scan.BuildScanServices;
@@ -134,8 +136,8 @@ public class GradleScopeServices extends DefaultServiceRegistry {
         return new TaskSelector(gradle, projectConfigurer);
     }
 
-    OptionReader createOptionReader() {
-        return new OptionReader();
+    OptionReader createOptionReader(ClassInspector classInspector, CrossBuildInMemoryCacheFactory cacheFactory) {
+        return new OptionReader(classInspector, cacheFactory);
     }
 
     CommandLineTaskParser createCommandLineTaskParser(OptionReader optionReader, TaskSelector taskSelector) {

@@ -22,6 +22,7 @@ import org.gradle.api.internal.HasConvention
 import org.gradle.api.internal.IConventionAware
 import org.gradle.api.plugins.ExtensionAware
 import org.gradle.internal.service.ServiceLookup
+import org.gradle.util.TestUtil
 
 import javax.inject.Inject
 
@@ -29,7 +30,7 @@ import static org.gradle.internal.instantiation.AsmBackedClassGeneratorTest.Abst
 import static org.gradle.internal.instantiation.AsmBackedClassGeneratorTest.BeanWithServiceGetters
 
 class AsmBackedClassGeneratorInjectUndecoratedTest extends AbstractClassGeneratorSpec {
-    final ClassGenerator generator = AsmBackedClassGenerator.injectOnly([], [])
+    final ClassGenerator generator = AsmBackedClassGenerator.injectOnly([], [], TestUtil.classInspector())
 
     def "returns original class when class is not abstract and no service getter methods present"() {
         expect:
@@ -82,8 +83,8 @@ class AsmBackedClassGeneratorInjectUndecoratedTest extends AbstractClassGenerato
         services.get(Number) >> 12
 
         expect:
-        def decorated = create(AsmBackedClassGenerator.decorateAndInject([], []), BeanWithServiceGetters)
-        def undecorated = create(AsmBackedClassGenerator.injectOnly([], []), BeanWithServiceGetters)
+        def decorated = create(AsmBackedClassGenerator.decorateAndInject([], [], TestUtil.classInspector()), BeanWithServiceGetters)
+        def undecorated = create(AsmBackedClassGenerator.injectOnly([], [], TestUtil.classInspector()), BeanWithServiceGetters)
         decorated.class != undecorated.class
         decorated instanceof ExtensionAware
         !(undecorated instanceof ExtensionAware)

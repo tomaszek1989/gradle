@@ -16,13 +16,23 @@
 
 package org.gradle.internal.reflect
 
+import org.gradle.cache.internal.TestCrossBuildInMemoryCacheFactory
 import spock.lang.Issue
 import spock.lang.Specification
 
 class ClassInspectorTest extends Specification {
+    def inspector = new ClassInspector(new TestCrossBuildInMemoryCacheFactory())
+
+    def "extracts properties of a Java class"() {
+        expect:
+        def details = inspect(JavaTestSubject)
+
+        details.propertyNames == ['class', 'myProperty', 'myBooleanProperty', 'myOtherBooleanProperty', 'writeOnly', 'protectedProperty', 'multiValue', 'myProperty2', 'myProperty3'] as Set
+    }
+
     def "extracts properties of a Groovy class"() {
         expect:
-        def details = ClassInspector.inspect(SomeClass)
+        def details = inspect(SomeClass)
 
         details.propertyNames == ['class', 'metaClass', 'prop', 'readOnly', 'writeOnly'] as Set
 
@@ -41,14 +51,14 @@ class ClassInspectorTest extends Specification {
 
     def "extracts property names"() {
         expect:
-        def details = ClassInspector.inspect(PropNames)
+        def details = inspect(PropNames)
 
         details.propertyNames == ['class', 'metaClass', 'a', 'b', 'URL', 'url', '_A'] as Set
     }
 
     def "extracts properties of a Groovy interface"() {
         expect:
-        def details = ClassInspector.inspect(SomeInterface)
+        def details = inspect(SomeInterface)
 
         details.propertyNames == ['prop', 'readOnly', 'writeOnly'] as Set
 
@@ -67,7 +77,7 @@ class ClassInspectorTest extends Specification {
 
     def "extracts boolean properties"() {
         expect:
-        def details = ClassInspector.inspect(BooleanProps)
+        def details = inspect(BooleanProps)
 
         details.propertyNames == ['class', 'metaClass', 'prop', 'someProp', 'readOnly'] as Set
 
@@ -86,7 +96,7 @@ class ClassInspectorTest extends Specification {
 
     def "extracts properties with overloaded getters and setters"() {
         expect:
-        def details = ClassInspector.inspect(Overloads)
+        def details = inspect(Overloads)
 
         def prop = details.getProperty('prop')
         prop.getters.size() == 2
@@ -95,7 +105,7 @@ class ClassInspectorTest extends Specification {
 
     def "extracts properties from super class"() {
         expect:
-        def details = ClassInspector.inspect(SubClass)
+        def details = inspect(SubClass)
 
         details.propertyNames == ['class', 'metaClass', 'prop', 'readOnly', 'writeOnly', 'other'] as Set
 
@@ -118,7 +128,7 @@ class ClassInspectorTest extends Specification {
 
     def "extracts properties from super interface"() {
         expect:
-        def details = ClassInspector.inspect(SubInterface)
+        def details = inspect(SubInterface)
 
         details.propertyNames == ['prop', 'readOnly', 'writeOnly', 'other'] as Set
 
@@ -141,7 +151,7 @@ class ClassInspectorTest extends Specification {
 
     def "extracts properties from super type graph"() {
         expect:
-        def details = ClassInspector.inspect(AbstractSubClass)
+        def details = inspect(AbstractSubClass)
 
         details.propertyNames == ['class', 'metaClass', 'prop', 'readOnly', 'writeOnly', 'other'] as Set
 
@@ -164,7 +174,7 @@ class ClassInspectorTest extends Specification {
 
     def "subtype can specialize a property type"() {
         expect:
-        def details = ClassInspector.inspect(SpecializingType)
+        def details = inspect(SpecializingType)
 
         details.propertyNames == ['class', 'metaClass', 'prop', 'readOnly', 'writeOnly'] as Set
 
@@ -183,7 +193,7 @@ class ClassInspectorTest extends Specification {
 
     def "collects instance methods that are not getters or setters"() {
         expect:
-        def details = ClassInspector.inspect(SomeClass)
+        def details = inspect(SomeClass)
 
         details.instanceMethods.find { it.name == 'prop' }
         !details.instanceMethods.contains(details.getProperty('prop').getters[0])
@@ -191,7 +201,7 @@ class ClassInspectorTest extends Specification {
 
     def "ignores overridden property getters and setters"() {
         expect:
-        def details = ClassInspector.inspect(Overrides)
+        def details = inspect(Overrides)
 
         def prop = details.getProperty('prop')
         prop.getters.size() == 1
@@ -202,11 +212,15 @@ class ClassInspectorTest extends Specification {
 
     def "ignores overridden instance methods"() {
         expect:
-        def details = ClassInspector.inspect(Overrides)
+        def details = inspect(Overrides)
 
         def methods = details.instanceMethods.findAll { it.name == 'prop' }
         methods.size() == 1
         methods[0].declaringClass == Overrides
+    }
+
+    def inspect(Class<?> type) {
+        return inspector.inspect(type)
     }
 
     class SomeClass {
@@ -364,20 +378,20 @@ class ClassInspectorTest extends Specification {
 
     def "can extract super types"() {
         expect:
-        ClassInspector.inspect(Object).superTypes.empty
-        ClassInspector.inspect(Serializable).superTypes.empty
-        ClassInspector.inspect(List).superTypes.toList() == [Collection, Iterable]
+        inspect(Object).superTypes.empty
+        inspect(Serializable).superTypes.empty
+        inspect(List).superTypes.toList() == [Collection, Iterable]
     }
 
     def "super types ordered by their distance"() {
         expect:
-        ClassInspector.inspect(ArrayList).superTypes.toList() == [AbstractList, AbstractCollection, Object, List, RandomAccess, Cloneable, Serializable, Collection, Iterable]
+        inspect(ArrayList).superTypes.toList() == [AbstractList, AbstractCollection, Object, List, RandomAccess, Cloneable, Serializable, Collection, Iterable]
     }
 
     @Issue("GRADLE-3317")
     def "method for property getter is for nearest declaration"() {
         expect:
-        def details = ClassInspector.inspect(clazz)
+        def details = inspect(clazz)
         def getters = details.getProperty('inputs').getGetters()
         getters[0].getDeclaringClass() == declaringClass
 

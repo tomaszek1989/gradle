@@ -35,6 +35,7 @@ dependencies {
     api(library("groovy"))
 
     implementation(project(":baseServicesGroovy"))
+    implementation(project(":persistentCache"))
     implementation(library("slf4j_api"))
     implementation(library("guava"))
     implementation(library("commons_lang"))

@@ -42,7 +42,7 @@ class AsmBackedClassGeneratedManagedStateTest extends AbstractClassGeneratorSpec
     @ClassRule
     @Shared
     TestNameTestDirectoryProvider tmpDir = new TestNameTestDirectoryProvider()
-    final ClassGenerator generator = AsmBackedClassGenerator.injectOnly([], [])
+    final ClassGenerator generator = AsmBackedClassGenerator.injectOnly([], [], TestUtil.classInspector())
 
     def canConstructInstanceOfAbstractClassWithAbstractPropertyGetterAndSetter() {
         def bean = create(BeanWithAbstractProperty)

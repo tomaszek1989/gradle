@@ -21,6 +21,7 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.Task;
 import org.gradle.api.tasks.Internal;
 import org.gradle.internal.extensibility.ConventionAwareHelper;
+import org.gradle.internal.reflect.ClassInspector;
 
 import java.util.concurrent.Callable;
 
@@ -41,7 +42,7 @@ public abstract class ConventionTask extends DefaultTask implements IConventionA
     @Internal
     public ConventionMapping getConventionMapping() {
         if (conventionMapping == null) {
-            conventionMapping = new ConventionAwareHelper(this, getConvention());
+            conventionMapping = new ConventionAwareHelper(this, getConvention(), getServices().get(ClassInspector.class));
         }
         return conventionMapping;
     }

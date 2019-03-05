@@ -37,7 +37,7 @@ import static org.gradle.internal.instantiation.AsmBackedClassGeneratorTest.NonG
 import static org.gradle.internal.instantiation.AsmBackedClassGeneratorTest.PrivateInjectBean
 
 class AsmBackedClassGeneratorInjectDecoratedTest extends AbstractClassGeneratorSpec {
-    final ClassGenerator generator = AsmBackedClassGenerator.decorateAndInject([], [])
+    final ClassGenerator generator = AsmBackedClassGenerator.decorateAndInject([], [], TestUtil.classInspector())
 
     def "can inject service using @Inject on a getter method with dummy method body"() {
         given:
@@ -228,7 +228,7 @@ class AsmBackedClassGeneratorInjectDecoratedTest extends AbstractClassGeneratorS
         def services = defaultServices()
         _ * services.get(Number, CustomInject) >> 12
 
-        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [CustomInject])
+        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [CustomInject], TestUtil.classInspector())
 
         when:
         def obj = create(generator, BeanWithCustomServices, services)
@@ -244,7 +244,7 @@ class AsmBackedClassGeneratorInjectDecoratedTest extends AbstractClassGeneratorS
         def services = defaultServices()
         _ * services.get(Number, CustomInject) >> 12
 
-        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [CustomInject])
+        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [CustomInject], TestUtil.classInspector())
 
         when:
         def obj = create(generator, AbstractBeanWithCustomServices, services)
@@ -256,7 +256,7 @@ class AsmBackedClassGeneratorInjectDecoratedTest extends AbstractClassGeneratorS
     }
 
     def "cannot use multiple inject annotations on getter"() {
-        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [CustomInject])
+        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [CustomInject], TestUtil.classInspector())
 
         when:
         create(generator, MultipleInjectAnnotations)
@@ -325,7 +325,7 @@ class AsmBackedClassGeneratorInjectDecoratedTest extends AbstractClassGeneratorS
     }
 
     def "cannot attach custom annotation that is known but not enabled to getter method"() {
-        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [])
+        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [], TestUtil.classInspector())
 
         when:
         create(generator, BeanWithCustomServices)
@@ -336,7 +336,7 @@ class AsmBackedClassGeneratorInjectDecoratedTest extends AbstractClassGeneratorS
     }
 
     def "cannot attach custom annotation that is known but not enabled to static method"() {
-        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [])
+        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [], TestUtil.classInspector())
 
         when:
         create(generator, StaticCustomInjectBean)
@@ -347,7 +347,7 @@ class AsmBackedClassGeneratorInjectDecoratedTest extends AbstractClassGeneratorS
     }
 
     def "cannot attach custom inject annotation to methods of ExtensionAware"() {
-        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [CustomInject])
+        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [CustomInject], TestUtil.classInspector())
 
         when:
         generator.generate(ExtensibleBeanWithCustomInject)
@@ -358,7 +358,7 @@ class AsmBackedClassGeneratorInjectDecoratedTest extends AbstractClassGeneratorS
     }
 
     def "cannot attach custom inject annotation to static method"() {
-        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [CustomInject])
+        def generator = AsmBackedClassGenerator.decorateAndInject([new CustomAnnotationHandler()], [CustomInject], TestUtil.classInspector())
 
         when:
         generator.generate(StaticCustomInjectBean)

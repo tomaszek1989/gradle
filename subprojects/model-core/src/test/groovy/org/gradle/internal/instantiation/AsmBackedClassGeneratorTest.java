@@ -48,6 +48,7 @@ import org.gradle.internal.extensibility.ExtensibleDynamicObject;
 import org.gradle.internal.extensibility.NoConventionMapping;
 import org.gradle.internal.metaobject.BeanDynamicObject;
 import org.gradle.internal.metaobject.DynamicObject;
+import org.gradle.internal.reflect.ClassInspector;
 import org.gradle.internal.reflect.DirectInstantiator;
 import org.gradle.internal.reflect.JavaReflectionUtil;
 import org.gradle.internal.service.DefaultServiceRegistry;
@@ -60,7 +61,6 @@ import spock.lang.Issue;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -101,11 +101,12 @@ import static org.junit.Assert.fail;
 public class AsmBackedClassGeneratorTest {
     @Rule
     public TestNameTestDirectoryProvider tmpDir = new TestNameTestDirectoryProvider();
-    private final ClassGenerator generator = AsmBackedClassGenerator.decorateAndInject(Collections.<InjectAnnotationHandler>emptyList(), Collections.<Class<? extends Annotation>>emptyList());
+    private final ClassGenerator generator = AsmBackedClassGenerator.decorateAndInject(Collections.emptyList(), Collections.emptyList(), TestUtil.classInspector());
 
     private <T> T newInstance(Class<T> clazz, Object... args) throws Exception {
         DefaultServiceRegistry services = new DefaultServiceRegistry();
         services.add(InstantiatorFactory.class, TestUtil.instantiatorFactory());
+        services.add(ClassInspector.class, TestUtil.classInspector());
         return newInstance(clazz, services, args);
     }
 

@@ -16,7 +16,6 @@
 
 package org.gradle.internal.reflect
 
-
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -27,23 +26,11 @@ import java.lang.reflect.Type
 
 import static JavaPropertyReflectionUtil.getAnnotation
 import static JavaPropertyReflectionUtil.hasDefaultToString
-import static JavaPropertyReflectionUtil.propertyNames
 import static JavaPropertyReflectionUtil.readableProperty
 import static JavaPropertyReflectionUtil.writeableProperty
 
 class JavaPropertyReflectionUtilTest extends Specification {
     JavaTestSubject myProperties = new JavaTestSubject()
-
-    def "property names"() {
-        expect:
-        propertyNames(new JavaTestSubject()) == ['class', 'myBooleanProperty', 'myOtherBooleanProperty', 'myProperty', 'myProperty2', 'myProperty3', 'protectedProperty', 'writeOnly', 'multiValue'] as Set
-
-        and:
-        propertyNames(new JavaTestSubjectSubclass()) == ['class', 'myBooleanProperty', 'myOtherBooleanProperty', 'myProperty', 'myProperty2', 'myProperty3', 'protectedProperty', 'writeOnly', 'multiValue', 'subclassBoolean'] as Set
-
-        and:
-        propertyNames(new WithProperties()) == ['class', 'metaClass', 'prop1', 'prop2', 'something', 'somethingElse', 'writeOnly'] as Set
-    }
 
     def "read property"() {
         expect:
@@ -351,19 +338,4 @@ class ClassWithToString {
     String toString() {
         return "ClassWithToString{}";
     }
-}
-
-class WithProperties {
-    String prop1
-    boolean prop2
-
-    void setWriteOnly(String s1) { }
-
-    Boolean isSomething() { return null }
-
-    boolean isSomethingElse() { return true }
-
-    String isNotAThing() { "no" }
-
-    private String getPrivateThing() { null }
 }

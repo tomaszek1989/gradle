@@ -25,12 +25,13 @@ import org.gradle.api.plugins.ExtensionAware
 import org.gradle.internal.BiAction
 import org.gradle.internal.util.BiFunction
 import org.gradle.util.ConfigureUtil
+import org.gradle.util.TestUtil
 import spock.lang.Issue
 
 import static org.gradle.internal.instantiation.AsmBackedClassGeneratorTest.*
 
 class AsmBackedClassGeneratorDecoratedTest extends AbstractClassGeneratorSpec {
-    final ClassGenerator generator = AsmBackedClassGenerator.decorateAndInject([], [])
+    final ClassGenerator generator = AsmBackedClassGenerator.decorateAndInject([], [], TestUtil.classInspector())
 
     def "can attach nested extensions to object"() {
         given:

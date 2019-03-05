@@ -16,6 +16,11 @@
 
 package org.gradle.internal.reflect;
 
+import org.gradle.api.Transformer;
+import org.gradle.cache.internal.CrossBuildInMemoryCache;
+import org.gradle.cache.internal.CrossBuildInMemoryCacheFactory;
+
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -26,14 +31,18 @@ import java.util.List;
 import java.util.Set;
 
 public class ClassInspector {
+    private final CrossBuildInMemoryCache<Class<?>, ClassDetails> cache;
+    private final ClassDetailsClassTransformer classTransformer = new ClassDetailsClassTransformer();
+
+    public ClassInspector(CrossBuildInMemoryCacheFactory cacheFactory) {
+        this.cache = cacheFactory.newClassCache();
+    }
 
     /**
      * Extracts a view of the given class. Ignores private methods.
      */
-    public static ClassDetails inspect(Class<?> type) {
-        MutableClassDetails classDetails = new MutableClassDetails(type);
-        visitGraph(type, classDetails);
-        return classDetails;
+    public ClassDetails inspect(Class<?> type) {
+        return cache.get(type, classTransformer);
     }
 
     private static void visitGraph(Class<?> type, MutableClassDetails classDetails) {
@@ -83,6 +92,18 @@ public class ClassInspector {
             } else {
                 classDetails.instanceMethod(method);
             }
+        }
+        for (Field field : type.getDeclaredFields()) {
+            classDetails.field(field);
+        }
+    }
+
+    private static class ClassDetailsClassTransformer implements Transformer<ClassDetails, Class<?>> {
+        @Override
+        public ClassDetails transform(Class<?> type) {
+            MutableClassDetails classDetails = new MutableClassDetails(type);
+            visitGraph(type, classDetails);
+            return classDetails;
         }
     }
 }

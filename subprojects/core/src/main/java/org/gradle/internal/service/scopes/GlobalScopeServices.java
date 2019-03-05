@@ -90,6 +90,7 @@ import org.gradle.internal.operations.BuildOperationListenerManager;
 import org.gradle.internal.operations.CurrentBuildOperationRef;
 import org.gradle.internal.operations.DefaultBuildOperationIdFactory;
 import org.gradle.internal.operations.DefaultBuildOperationListenerManager;
+import org.gradle.internal.reflect.ClassInspector;
 import org.gradle.internal.reflect.DirectInstantiator;
 import org.gradle.internal.reflect.Instantiator;
 import org.gradle.internal.remote.MessagingServer;
@@ -286,8 +287,12 @@ public class GlobalScopeServices extends BasicGlobalScopeServices {
         return new StringInterner();
     }
 
-    InstantiatorFactory createInstantiatorFactory(CrossBuildInMemoryCacheFactory cacheFactory, List<InjectAnnotationHandler> annotationHandlers) {
-        return new DefaultInstantiatorFactory(cacheFactory, annotationHandlers);
+    ClassInspector createClassInspector(CrossBuildInMemoryCacheFactory cacheFactory) {
+        return new ClassInspector(cacheFactory);
+    }
+
+    InstantiatorFactory createInstantiatorFactory(ClassInspector classInspector, CrossBuildInMemoryCacheFactory cacheFactory, List<InjectAnnotationHandler> annotationHandlers) {
+        return new DefaultInstantiatorFactory(classInspector, cacheFactory, annotationHandlers);
     }
 
     GradleUserHomeScopeServiceRegistry createGradleUserHomeScopeServiceRegistry(ServiceRegistry globalServices) {

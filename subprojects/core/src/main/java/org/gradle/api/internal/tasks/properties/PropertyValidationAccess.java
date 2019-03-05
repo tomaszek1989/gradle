@@ -36,6 +36,7 @@ import org.gradle.cache.internal.DefaultCrossBuildInMemoryCacheFactory;
 import org.gradle.internal.Cast;
 import org.gradle.internal.event.DefaultListenerManager;
 import org.gradle.internal.instantiation.DefaultInstantiatorFactory;
+import org.gradle.internal.reflect.ClassInspector;
 import org.gradle.internal.reflect.ParameterValidationContext;
 import org.gradle.internal.reflect.PropertyMetadata;
 import org.gradle.internal.service.DefaultServiceLocator;
@@ -82,6 +83,7 @@ public class PropertyValidationAccess {
                 registration.add(DefaultListenerManager.class, new DefaultListenerManager());
                 registration.add(DefaultCrossBuildInMemoryCacheFactory.class);
                 registration.add(DefaultInstantiatorFactory.class);
+                registration.add(ClassInspector.class);
                 List<PluginServiceRegistry> pluginServiceFactories = new DefaultServiceLocator(false, getClass().getClassLoader()).getAll(PluginServiceRegistry.class);
                 for (PluginServiceRegistry pluginServiceFactory : pluginServiceFactories) {
                     pluginServiceFactory.registerGlobalServices(registration);

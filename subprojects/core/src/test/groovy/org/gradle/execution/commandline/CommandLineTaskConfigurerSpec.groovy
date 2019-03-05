@@ -17,18 +17,20 @@ package org.gradle.execution.commandline
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
-import org.gradle.api.tasks.options.Option
 import org.gradle.api.internal.tasks.options.OptionReader
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.options.Option
+import org.gradle.cache.internal.TestCrossBuildInMemoryCacheFactory
 import org.gradle.execution.TaskSelector
 import org.gradle.internal.typeconversion.TypeConversionException
 import org.gradle.testfixtures.ProjectBuilder
+import org.gradle.util.TestUtil
 import spock.lang.Specification
 
 class CommandLineTaskConfigurerSpec extends Specification {
-
+    OptionReader optionReader = new OptionReader(TestUtil.classInspector(), new TestCrossBuildInMemoryCacheFactory())
     Project project = ProjectBuilder.builder().build()
-    CommandLineTaskConfigurer configurer = new CommandLineTaskConfigurer(new OptionReader());
+    CommandLineTaskConfigurer configurer = new CommandLineTaskConfigurer(optionReader);
 
     TaskSelector selector = Mock()
     SomeTask task = project.task('someTask', type: SomeTask)
@@ -49,7 +51,7 @@ class CommandLineTaskConfigurerSpec extends Specification {
     }
 
     def "does not attempt configure if no options"() {
-        configurer = Spy(CommandLineTaskConfigurer, constructorArgs: [new OptionReader()])
+        configurer = Spy(CommandLineTaskConfigurer, constructorArgs: [optionReader])
 
         when:
         def out = configurer.configureTasks([task, task2], ['foo'])

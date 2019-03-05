@@ -16,13 +16,20 @@
 
 package org.gradle.api.internal.tasks.options;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.gradle.api.Transformer;
+import org.gradle.api.internal.GeneratedSubclasses;
 import org.gradle.api.tasks.options.Option;
 import org.gradle.api.tasks.options.OptionValues;
+import org.gradle.cache.internal.CrossBuildInMemoryCache;
+import org.gradle.cache.internal.CrossBuildInMemoryCacheFactory;
+import org.gradle.internal.reflect.ClassDetails;
+import org.gradle.internal.reflect.ClassInspector;
 import org.gradle.internal.reflect.JavaMethod;
 import org.gradle.util.CollectionUtils;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -35,40 +42,53 @@ import java.util.Map;
 import java.util.Set;
 
 public class OptionReader {
-    private final ListMultimap<Class<?>, OptionElement> cachedOptionElements = ArrayListMultimap.create();
-    private final Map<OptionElement, JavaMethod<Object, Collection>> cachedOptionValueMethods = new HashMap<OptionElement, JavaMethod<Object, Collection>>();
     private final OptionValueNotationParserFactory optionValueNotationParserFactory = new OptionValueNotationParserFactory();
+    private final ClassInspector classInspector;
+    private final CrossBuildInMemoryCache<Class<?>, ClassOptionDetails> cachedOptions;
+
+    public OptionReader(ClassInspector classInspector, CrossBuildInMemoryCacheFactory cacheFactory) {
+        this.classInspector = classInspector;
+        this.cachedOptions = cacheFactory.newClassCache();
+    }
 
     public List<OptionDescriptor> getOptions(Object target) {
-        final Class<?> targetClass = target.getClass();
+        final Class<?> targetClass = GeneratedSubclasses.unpackType(target);
         Map<String, OptionDescriptor> options = new HashMap<String, OptionDescriptor>();
-        if (!cachedOptionElements.containsKey(targetClass)) {
-            loadClassDescriptorInCache(target);
-        }
-        for (OptionElement optionElement : cachedOptionElements.get(targetClass)) {
-            JavaMethod<Object, Collection> optionValueMethod = cachedOptionValueMethods.get(optionElement);
+        ClassOptionDetails optionsDetails = cachedOptions.get(targetClass, new Transformer<ClassOptionDetails, Class<?>>() {
+            @Override
+            public ClassOptionDetails transform(Class<?> aClass) {
+                return loadClassDescriptorInCache(targetClass);
+            }
+        });
+        for (OptionElement optionElement : optionsDetails.options) {
+            JavaMethod<Object, Collection> optionValueMethod = optionsDetails.optionMethods.get(optionElement);
             options.put(optionElement.getOptionName(), new InstanceOptionDescriptor(target, optionElement, optionValueMethod));
         }
         return CollectionUtils.sort(options.values());
     }
 
-    private void loadClassDescriptorInCache(Object target) {
-        final Collection<OptionElement> optionElements = getOptionElements(target);
-        List<JavaMethod<Object, Collection>> optionValueMethods = loadValueMethodForOption(target.getClass());
+    private ClassOptionDetails loadClassDescriptorInCache(Class<?> targetClass) {
+        ClassDetails classDetails = classInspector.inspect(targetClass);
+        ImmutableList<OptionElement> optionElements = getOptionElements(classDetails);
+        List<JavaMethod<Object, Collection>> optionValueMethods = loadValueMethodForOption(targetClass, classDetails);
         Set<String> processedOptionElements = new HashSet<String>();
+        ImmutableMap.Builder<OptionElement, JavaMethod<Object, Collection>> methodsBuilder = ImmutableMap.builderWithExpectedSize(optionElements.size());
         for (OptionElement optionElement : optionElements) {
             if (processedOptionElements.contains(optionElement.getOptionName())) {
                 throw new OptionValidationException(String.format("@Option '%s' linked to multiple elements in class '%s'.",
-                        optionElement.getOptionName(), target.getClass().getName()));
+                    optionElement.getOptionName(), targetClass.getName()));
             }
             processedOptionElements.add(optionElement.getOptionName());
             JavaMethod<Object, Collection> optionValueMethodForOption = getOptionValueMethodForOption(optionValueMethods, optionElement);
-
-            cachedOptionElements.put(target.getClass(), optionElement);
-            cachedOptionValueMethods.put(optionElement, optionValueMethodForOption);
+            if (optionValueMethodForOption != null) {
+                methodsBuilder.put(optionElement, optionValueMethodForOption);
+            }
         }
+
+        return new ClassOptionDetails(optionElements, methodsBuilder.build());
     }
 
+    @Nullable
     private static JavaMethod<Object, Collection> getOptionValueMethodForOption(List<JavaMethod<Object, Collection>> optionValueMethods, OptionElement optionElement) {
         JavaMethod<Object, Collection> valueMethod = null;
         for (JavaMethod<Object, Collection> optionValueMethod : optionValueMethods) {
@@ -78,9 +98,9 @@ public class OptionReader {
                     valueMethod = optionValueMethod;
                 } else {
                     throw new OptionValidationException(
-                            String.format("@OptionValues for '%s' cannot be attached to multiple methods in class '%s'.",
-                                    optionElement.getOptionName(),
-                                    optionValueMethod.getMethod().getDeclaringClass().getName()));
+                        String.format("@OptionValues for '%s' cannot be attached to multiple methods in class '%s'.",
+                            optionElement.getOptionName(),
+                            optionValueMethod.getMethod().getDeclaringClass().getName()));
                 }
             }
         }
@@ -92,19 +112,16 @@ public class OptionReader {
         return optionValues.value();
     }
 
-    private Collection<OptionElement> getOptionElements(Object target) {
-        List<OptionElement> allOptionElements = new ArrayList<OptionElement>();
-        for (Class<?> type = target.getClass(); type != Object.class && type != null; type = type.getSuperclass()) {
-            allOptionElements.addAll(getMethodAnnotations(type));
-            allOptionElements.addAll(getFieldAnnotations(type));
-        }
-
-        return allOptionElements;
+    private ImmutableList<OptionElement> getOptionElements(ClassDetails classDetails) {
+        ImmutableList.Builder<OptionElement> allOptionElements = ImmutableList.builder();
+        allOptionElements.addAll(getMethodAnnotations(classDetails));
+        allOptionElements.addAll(getFieldAnnotations(classDetails));
+        return allOptionElements.build();
     }
 
-    private List<OptionElement> getFieldAnnotations(Class<?> type) {
+    private List<OptionElement> getFieldAnnotations(ClassDetails classDetails) {
         List<OptionElement> fieldOptionElements = new ArrayList<OptionElement>();
-        for (Field field : type.getDeclaredFields()) {
+        for (Field field : classDetails.getAllFields()) {
             Option option = findOption(field);
             if (option != null) {
                 fieldOptionElements.add(FieldOptionElement.create(option, field, optionValueNotationParserFactory));
@@ -124,9 +141,9 @@ public class OptionReader {
         return option;
     }
 
-    private List<OptionElement> getMethodAnnotations(Class<?> type) {
+    private List<OptionElement> getMethodAnnotations(ClassDetails classDetails) {
         List<OptionElement> methodOptionElements = new ArrayList<OptionElement>();
-        for (Method method : type.getDeclaredMethods()) {
+        for (Method method : classDetails.getAllMethods()) {
             Option option = findOption(method);
             if (option != null) {
                 OptionElement methodOptionDescriptor = MethodOptionElement.create(option, method,
@@ -148,14 +165,12 @@ public class OptionReader {
         return option;
     }
 
-    private static List<JavaMethod<Object, Collection>> loadValueMethodForOption(Class<?> declaredClass) {
+    private static List<JavaMethod<Object, Collection>> loadValueMethodForOption(Class<?> targetClass, ClassDetails classDetails) {
         List<JavaMethod<Object, Collection>> methods = new ArrayList<JavaMethod<Object, Collection>>();
-        for (Class<?> type = declaredClass; type != Object.class && type != null; type = type.getSuperclass()) {
-            for (Method method : type.getDeclaredMethods()) {
-                JavaMethod<Object, Collection> optionValuesMethod = getAsOptionValuesMethod(type, method);
-                if (optionValuesMethod != null) {
-                    methods.add(optionValuesMethod);
-                }
+        for (Method method : classDetails.getAllMethods()) {
+            JavaMethod<Object, Collection> optionValuesMethod = getAsOptionValuesMethod(targetClass, method);
+            if (optionValuesMethod != null) {
+                methods.add(optionValuesMethod);
             }
         }
         return methods;
@@ -178,4 +193,13 @@ public class OptionReader {
         }
     }
 
+    private static class ClassOptionDetails {
+        final ImmutableList<OptionElement> options;
+        final ImmutableMap<OptionElement, JavaMethod<Object, Collection>> optionMethods;
+
+        public ClassOptionDetails(ImmutableList<OptionElement> options, ImmutableMap<OptionElement, JavaMethod<Object, Collection>> optionMethods) {
+            this.options = options;
+            this.optionMethods = optionMethods;
+        }
+    }
 }

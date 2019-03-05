@@ -18,6 +18,7 @@ package org.gradle.internal.instantiation;
 
 import com.google.common.collect.ImmutableSet;
 import org.gradle.cache.internal.CrossBuildInMemoryCacheFactory;
+import org.gradle.internal.reflect.ClassInspector;
 import org.gradle.internal.reflect.Instantiator;
 import org.gradle.internal.service.DefaultServiceRegistry;
 import org.gradle.internal.service.ServiceLookup;
@@ -30,6 +31,7 @@ import java.util.List;
 
 public class DefaultInstantiatorFactory implements InstantiatorFactory {
     private final ServiceRegistry defaultServices;
+    private final ClassInspector classInspector;
     private final CrossBuildInMemoryCacheFactory cacheFactory;
     private final List<InjectAnnotationHandler> annotationHandlers;
     private final DefaultInstantiationScheme injectOnlyScheme;
@@ -37,14 +39,16 @@ public class DefaultInstantiatorFactory implements InstantiatorFactory {
     private final DefaultInstantiationScheme decoratingScheme;
     private final DefaultInstantiationScheme decoratingLenientScheme;
 
-    public DefaultInstantiatorFactory(CrossBuildInMemoryCacheFactory cacheFactory, List<InjectAnnotationHandler> annotationHandlers) {
+    public DefaultInstantiatorFactory(ClassInspector classInspector, CrossBuildInMemoryCacheFactory cacheFactory, List<InjectAnnotationHandler> annotationHandlers) {
+        this.classInspector = classInspector;
         this.cacheFactory = cacheFactory;
         this.annotationHandlers = annotationHandlers;
         DefaultServiceRegistry services = new DefaultServiceRegistry();
         services.add(InstantiatorFactory.class, this);
+        services.add(ClassInspector.class, classInspector);
         this.defaultServices = services;
-        ClassGenerator injectOnly = AsmBackedClassGenerator.injectOnly(annotationHandlers, ImmutableSet.of());
-        ClassGenerator decorated = AsmBackedClassGenerator.decorateAndInject(annotationHandlers, ImmutableSet.of());
+        ClassGenerator injectOnly = AsmBackedClassGenerator.injectOnly(annotationHandlers, ImmutableSet.of(), classInspector);
+        ClassGenerator decorated = AsmBackedClassGenerator.decorateAndInject(annotationHandlers, ImmutableSet.of(), classInspector);
         ConstructorSelector injectOnlyJsr330Selector = new Jsr330ConstructorSelector(injectOnly, cacheFactory.newClassCache());
         ConstructorSelector decoratedJsr330Selector = new Jsr330ConstructorSelector(decorated, cacheFactory.newClassCache());
         ConstructorSelector injectOnlyLenientSelector = new ParamsMatchingConstructorSelector(injectOnly, cacheFactory.newClassCache());
@@ -79,7 +83,7 @@ public class DefaultInstantiatorFactory implements InstantiatorFactory {
         for (Class<? extends Annotation> annotation : injectAnnotations) {
             assertKnownAnnotation(annotation);
         }
-        ClassGenerator classGenerator = AsmBackedClassGenerator.injectOnly(annotationHandlers, ImmutableSet.copyOf(injectAnnotations));
+        ClassGenerator classGenerator = AsmBackedClassGenerator.injectOnly(annotationHandlers, ImmutableSet.copyOf(injectAnnotations), classInspector);
         Jsr330ConstructorSelector constructorSelector = new Jsr330ConstructorSelector(classGenerator, cacheFactory.newClassCache());
         ImmutableSet.Builder<Class<? extends Annotation>> builder = ImmutableSet.builderWithExpectedSize(injectAnnotations.size() + 1);
         builder.addAll(injectAnnotations);

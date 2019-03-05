@@ -32,6 +32,7 @@ import org.gradle.cache.internal.TestCrossBuildInMemoryCacheFactory
 import org.gradle.internal.instantiation.DefaultInstantiatorFactory
 import org.gradle.internal.instantiation.InjectAnnotationHandler
 import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.reflect.ClassInspector
 import org.gradle.internal.service.DefaultServiceRegistry
 import org.gradle.test.fixtures.file.TestDirectoryProvider
 import org.gradle.test.fixtures.file.TestFile
@@ -52,11 +53,15 @@ class TestUtil {
         this.rootDir = rootDir
     }
 
+    static ClassInspector classInspector() {
+        return new ClassInspector(new TestCrossBuildInMemoryCacheFactory())
+    }
+
     static InstantiatorFactory instantiatorFactory() {
         if (instantiatorFactory == null) {
             NativeServicesTestFixture.initialize()
             def annotationHandlers = ProjectBuilderImpl.getGlobalServices().getAll(InjectAnnotationHandler.class)
-            instantiatorFactory = new DefaultInstantiatorFactory(new TestCrossBuildInMemoryCacheFactory(), annotationHandlers)
+            instantiatorFactory = new DefaultInstantiatorFactory(classInspector(), new TestCrossBuildInMemoryCacheFactory(), annotationHandlers)
         }
         return instantiatorFactory
     }

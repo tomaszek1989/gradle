@@ -18,6 +18,7 @@ package org.gradle.internal.reflect;
 
 import com.google.common.collect.ImmutableSet;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,6 +33,7 @@ class MutableClassDetails implements ClassDetails {
     private final MethodSet instanceMethods = new MethodSet();
     private final Map<String, MutablePropertyDetails> properties = new TreeMap<String, MutablePropertyDetails>();
     private final List<Method> methods = new ArrayList<Method>();
+    private final List<Field> fields = new ArrayList<Field>();
     private final Set<Class<?>> superTypes = new LinkedHashSet<Class<?>>();
 
     MutableClassDetails(Class<?> type) {
@@ -41,6 +43,11 @@ class MutableClassDetails implements ClassDetails {
     @Override
     public List<Method> getAllMethods() {
         return methods;
+    }
+
+    @Override
+    public List<Field> getAllFields() {
+        return fields;
     }
 
     @Override
@@ -96,5 +103,9 @@ class MutableClassDetails implements ClassDetails {
             properties.put(propertyName, property);
         }
         return property;
+    }
+
+    public void field(Field field) {
+        fields.add(field);
     }
 }

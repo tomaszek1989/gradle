@@ -88,9 +88,11 @@ abstract class AbstractClassGenerator implements ClassGenerator {
     private static final Lock CACHE_LOCK = new ReentrantLock();
     private final ImmutableSet<Class<? extends Annotation>> disabledAnnotations;
     private final ImmutableSet<Class<? extends Annotation>> enabledAnnotations;
+    private final ClassInspector classInspector;
 
-    public AbstractClassGenerator(Collection<? extends InjectAnnotationHandler> allKnownAnnotations, Collection<Class<? extends Annotation>> enabledAnnotations) {
+    public AbstractClassGenerator(Collection<? extends InjectAnnotationHandler> allKnownAnnotations, Collection<Class<? extends Annotation>> enabledAnnotations, ClassInspector classInspector) {
         this.enabledAnnotations = ImmutableSet.copyOf(enabledAnnotations);
+        this.classInspector = classInspector;
         ImmutableSet.Builder<Class<? extends Annotation>> builder = ImmutableSet.builder();
         for (InjectAnnotationHandler handler : allKnownAnnotations) {
             if (!enabledAnnotations.contains(handler.getAnnotationType())) {
@@ -210,7 +212,7 @@ abstract class AbstractClassGenerator implements ClassGenerator {
     protected abstract <T> T newInstance(Constructor<T> constructor, ServiceLookup services, Instantiator nested, Object[] params) throws InvocationTargetException, IllegalAccessException, InstantiationException;
 
     private void inspectType(Class<?> type, List<ClassValidator> validators, List<ClassGenerationHandler> generationHandlers, UnclaimedPropertyHandler unclaimedHandler) {
-        ClassDetails classDetails = ClassInspector.inspect(type);
+        ClassDetails classDetails = classInspector.inspect(type);
         ClassMetadata classMetaData = new ClassMetadata(type);
         assembleProperties(classDetails, classMetaData);
 
@@ -265,20 +267,17 @@ abstract class AbstractClassGenerator implements ClassGenerator {
             }
         }
 
-        visitFields(type, generationHandlers);
+        visitFields(classDetails, generationHandlers);
     }
 
-    private void visitFields(Class<?> type, List<ClassGenerationHandler> generationHandlers) {
-        for (Field field : type.getDeclaredFields()) {
+    private void visitFields(ClassDetails classDetails, List<ClassGenerationHandler> generationHandlers) {
+        for (Field field : classDetails.getAllFields()) {
             if (!Modifier.isStatic(field.getModifiers())) {
                 for (ClassGenerationHandler handler : generationHandlers) {
                     handler.hasFields();
                 }
                 return;
             }
-        }
-        if (type.getSuperclass() != null && type.getSuperclass() != Object.class) {
-            visitFields(type.getSuperclass(), generationHandlers);
         }
     }
 

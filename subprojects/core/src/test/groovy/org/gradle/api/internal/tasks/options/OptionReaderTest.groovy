@@ -20,6 +20,8 @@ import org.gradle.api.Project
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.options.Option
 import org.gradle.api.tasks.options.OptionValues
+import org.gradle.cache.internal.TestCrossBuildInMemoryCacheFactory
+import org.gradle.util.TestUtil
 import spock.lang.Specification
 
 class OptionReaderTest extends Specification {
@@ -28,7 +30,7 @@ class OptionReaderTest extends Specification {
     Project project
 
     def setup() {
-        reader = new OptionReader()
+        reader = new OptionReader(TestUtil.classInspector(), new TestCrossBuildInMemoryCacheFactory())
     }
 
     def "can read options linked to setter methods of a task"() {

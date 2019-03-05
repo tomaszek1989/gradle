@@ -16,6 +16,7 @@
 
 package org.gradle.internal.reflect;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
@@ -47,6 +48,11 @@ public interface ClassDetails {
      * Includes inherited methods.
      */
     List<Method> getInstanceMethods();
+
+    /**
+     * Returns all fields of this class, including all inherited, private and static fields.
+     */
+    List<Field> getAllFields();
 
     /**
      * The ordered super types of this type.

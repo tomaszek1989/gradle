@@ -34,12 +34,8 @@ import java.lang.reflect.WildcardType;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
-import java.util.Set;
-import java.util.WeakHashMap;
 
 public class JavaPropertyReflectionUtil {
-
-    private static final WeakHashMap<Class<?>, Set<String>> PROPERTY_CACHE = new WeakHashMap<Class<?>, Set<String>>();
 
     /**
      * Locates the property with the given name as a readable property. Searches only public properties.
@@ -111,18 +107,6 @@ public class JavaPropertyReflectionUtil {
 
     private static String toMethodName(String prefix, String propertyName) {
         return prefix + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
-    }
-
-    public static Set<String> propertyNames(Object target) {
-        Class<?> targetType = target.getClass();
-        synchronized (PROPERTY_CACHE) {
-            Set<String> cached = PROPERTY_CACHE.get(targetType);
-            if (cached == null) {
-                cached = ClassInspector.inspect(targetType).getPropertyNames();
-                PROPERTY_CACHE.put(targetType, cached);
-            }
-            return cached;
-        }
     }
 
     public static <A extends Annotation> A getAnnotation(Class<?> type, Class<A> annotationType) {
