@@ -33,6 +33,7 @@
 package org.gradle.integtests
 
 import org.gradle.integtests.fixtures.AbstractIntegrationSpec
+import org.gradle.internal.reflect.ClassInspector
 
 class GroovyToJavaConversionIntegrationTest extends AbstractIntegrationSpec {
 
@@ -47,7 +48,7 @@ class GroovyToJavaConversionIntegrationTest extends AbstractIntegrationSpec {
                 doLast {
                     def classes = [${convertedClasses.collect { "${it}" }.join(',')}]
                     classes.each { convertedClass ->
-                        def properties = org.gradle.internal.reflect.ClassInspector.inspect(convertedClass).properties
+                        def properties = services.get(${ClassInspector.name}).inspect(convertedClass).properties
                         properties.each { prop ->
                             if (prop.getters.find { it.declaringClass == convertedClass }) {
                                 println "Checking property \${prop.name} on \${convertedClass.name}"
