@@ -32,7 +32,7 @@ plugins {
     // We have to apply it here at the moment, so that when the build scan plugin is auto-applied via --scan can detect that
     // the plugin has been already applied. For that the plugin has to be applied with the new plugin DSL syntax.
     com.gradle.`build-scan`
-    id("org.gradle.ci.tag-single-build") version("0.54")
+    id("org.gradle.ci.tag-single-build") version("0.55")
 }
 
 defaultTasks("assemble")
@@ -386,3 +386,13 @@ tasks.register<Zip>("allIncubationReportsZip") {
 }
 
 fun Project.collectAllIncubationReports() = subprojects.flatMap { it.tasks.withType(IncubatingApiReportTask::class) }
+
+// Ensure the archives produced are reproducible
+allprojects {
+    tasks.withType<AbstractArchiveTask>().configureEach {
+        isPreserveFileTimestamps = false
+        isReproducibleFileOrder = true
+        dirMode = Integer.parseInt("0755", 8)
+        fileMode = Integer.parseInt("0644", 8)
+    }
+}
